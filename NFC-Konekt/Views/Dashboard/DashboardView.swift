@@ -16,17 +16,27 @@ struct DashboardView: View {
         TabView {
             HomeTabView(viewModel: viewModel, authViewModel: authViewModel)
                 .tabItem {
-                    Label("Home", systemImage: "house.fill")
+                    Label("Dashboard", systemImage: "house.fill")
                 }
             
-            Text("NFC Card Management Modules Loading...")
+            HistoryTabView()
                 .tabItem {
-                    Label("My Cards", systemImage: "lanyardcard.fill")
+                    Label("History", systemImage: "clock.arrow.circlepath")
                 }
             
-            Text("Settings Modules Loading...")
+            ConnectTabView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
+                    Label("Connect", systemImage: "person.2.fill")
+                }
+            
+            ContactsTabView()
+                .tabItem {
+                    Label("Cards", systemImage: "lanyardcard.fill")
+                }
+            
+            MenuTabView(authViewModel: authViewModel)
+                .tabItem {
+                    Label("Menu", systemImage: "line.3.horizontal")
                 }
         }
         .accentColor(.twIndigo600)

@@ -5,7 +5,6 @@
 //  Created by Rei Soemanto on 18/04/26.
 //
 
-
 import Foundation
 
 struct User: Identifiable {
