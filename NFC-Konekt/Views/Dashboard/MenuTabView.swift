@@ -27,7 +27,7 @@ struct MenuTabView: View {
                 
                 // Subscription Section
                 Section(header: Text("Billing")) {
-                    NavigationLink(destination: Text("Subscription Status Modules Loading...")) {
+                    NavigationLink(destination: SubscriptionStatusView()) {
                         Label("Subscription Status", systemImage: "doc.text.fill")
                     }
                     
