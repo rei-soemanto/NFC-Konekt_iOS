@@ -8,17 +8,30 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var authViewModel = AuthViewModel()
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            if authViewModel.isAuthenticated {
+                DashboardView()
+                    .environmentObject(authViewModel)
+            } else {
+                AuthenticationView()
+                    .environmentObject(authViewModel)
+            }
         }
-        .padding()
+        .animation(.easeInOut, value: authViewModel.isAuthenticated)
     }
 }
 
-#Preview {
+#Preview("Light Mode") {
     ContentView()
+        .environmentObject(AuthViewModel())
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark Mode") {
+    ContentView()
+        .environmentObject(AuthViewModel())
+        .preferredColorScheme(.dark)
 }
