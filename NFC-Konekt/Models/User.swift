@@ -13,6 +13,12 @@ struct User: Identifiable {
     let email: String
 }
 
+struct SocialLinkItem: Identifiable {
+    let id = UUID()
+    var platform: String
+    var url: String
+}
+
 enum AuthState {
     case unauthenticated
     case authenticating
