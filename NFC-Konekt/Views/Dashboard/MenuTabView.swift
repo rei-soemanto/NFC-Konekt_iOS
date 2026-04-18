@@ -19,7 +19,7 @@ struct MenuTabView: View {
                 // Team Management Section
                 if !isInherited && ["GROUP", "COMPANY", "CORPORATE"].contains(userPlan) {
                     Section(header: Text("Management")) {
-                        NavigationLink(destination: Text("Team View Modules Loading...")) {
+                        NavigationLink(destination: TeamManagementView()) {
                             Label("My Team", systemImage: "person.3.sequence.fill")
                         }
                     }
