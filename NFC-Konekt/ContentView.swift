@@ -8,30 +8,36 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var authViewModel = AuthViewModel()
+    @StateObject private var container = DIContainer()
+    @StateObject private var authViewModel: AuthViewModel
+    
+    init() {
+        let rootContainer = DIContainer()
+        _container = StateObject(wrappedValue: rootContainer)
+        _authViewModel = StateObject(wrappedValue: AuthViewModel(repository: rootContainer.authRepository))
+    }
     
     var body: some View {
         Group {
             if authViewModel.isAuthenticated {
-                DashboardView()
+                DashboardView(repository: container.dashboardRepository)
                     .environmentObject(authViewModel)
             } else {
-                AuthenticationView()
+                AuthenticationView(viewModel: authViewModel)
                     .environmentObject(authViewModel)
             }
         }
+        .environmentObject(container)
         .animation(.easeInOut, value: authViewModel.isAuthenticated)
     }
 }
 
 #Preview("Light Mode") {
     ContentView()
-        .environmentObject(AuthViewModel())
         .preferredColorScheme(.light)
 }
 
 #Preview("Dark Mode") {
     ContentView()
-        .environmentObject(AuthViewModel())
         .preferredColorScheme(.dark)
 }
