@@ -16,11 +16,17 @@ struct DashboardUser: Codable {
     let id: String
     let fullName: String
     let email: String
+    let phone: String?
+    let companyWebsite: String?
+    let bio: String?
     let avatarUrl: String?
     let role: String
     let companyName: String?
     let planCategory: String
     let isCorporate: Bool
+    
+    let address: AddressDTO?
+    let socialLinks: [SocialLinkItem]?
 }
 
 struct DashboardStats: Codable {

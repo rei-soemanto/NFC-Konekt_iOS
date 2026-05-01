@@ -94,35 +94,3 @@ struct TeamStatsCard: View {
         .padding(.horizontal)
     }
 }
-
-#Preview("Light Mode") {
-    let container = DIContainer()
-    let viewModel = TeamViewModel(repository: container.teamRepository)
-    
-    return ZStack {
-        Color.twGray100.ignoresSafeArea()
-        
-        VStack {
-            TeamStatsCard(viewModel: viewModel)
-            Spacer()
-        }
-        .padding(.top)
-    }
-    .preferredColorScheme(.light)
-}
-
-#Preview("Dark Mode") {
-    let container = DIContainer()
-    let viewModel = TeamViewModel(repository: container.teamRepository)
-    
-    return ZStack {
-        Color.twGray950.ignoresSafeArea()
-        
-        VStack {
-            TeamStatsCard(viewModel: viewModel)
-            Spacer()
-        }
-        .padding(.top)
-    }
-    .preferredColorScheme(.dark)
-}
