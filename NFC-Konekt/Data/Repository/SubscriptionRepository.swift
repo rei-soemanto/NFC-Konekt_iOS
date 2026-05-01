@@ -31,14 +31,14 @@ class SubscriptionRepository {
     
     func markShipmentReceived() async throws {
         let _: EmptyResponse = try await apiClient.request(
-            endpoint: "subscription/shipment-received",
+            endpoint: "subscription/shipment/receive",
             method: "POST"
         )
     }
     
     func initiateMobileCheckout(request: MobileCheckoutRequest) async throws -> MobileCheckoutResponse {
         return try await apiClient.request(
-            endpoint: "subscription/checkout",
+            endpoint: "subscription/mobile-checkout",
             method: "POST",
             body: request
         )

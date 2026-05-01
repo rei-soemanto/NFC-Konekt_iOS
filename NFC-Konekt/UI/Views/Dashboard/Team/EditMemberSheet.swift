@@ -9,86 +9,80 @@ import SwiftUI
 
 struct EditMemberSheet: View {
     @ObservedObject var viewModel: TeamViewModel
-    @State private var editableMember: TeamMember
-    @Environment(\.presentationMode) var presentationMode
+    let member: TeamMemberDto
     
-    init(viewModel: TeamViewModel, member: TeamMember) {
+    @State private var jobTitle: String
+    @State private var isPublic: Bool
+    @Environment(\.colorScheme) var colorScheme
+    
+    init(viewModel: TeamViewModel, member: TeamMemberDto) {
         self.viewModel = viewModel
-        _editableMember = State(initialValue: member)
+        self.member = member
+        _jobTitle = State(initialValue: member.jobTitle ?? "")
+        _isPublic = State(initialValue: member.isCompanyPublic ?? true)
     }
+    
+    var sheetBg: Color { colorScheme == .dark ? .twGray900 : .white }
+    var inputBg: Color { colorScheme == .dark ? Color.black.opacity(0.3) : Color(.systemGray6) }
+    var primaryText: Color { colorScheme == .dark ? .white : .twGray900 }
     
     var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Basic Info")) {
-                    Text(editableMember.fullName)
-                        .foregroundColor(.gray)
-                    Text(editableMember.email)
-                        .foregroundColor(.gray)
+        VStack(spacing: 24) {
+            Text("Edit Member")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(primaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            // Basic Info (Read Only)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(member.fullName).font(.system(size: 16, weight: .medium)).foregroundColor(.gray)
+                Text(member.email).font(.system(size: 14)).foregroundColor(.gray)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            Divider()
+            
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Role in Company (e.g. Manager)").font(.caption).foregroundColor(.gray)
+                    TextField("", text: $jobTitle)
+                        .padding()
+                        .background(inputBg)
+                        .cornerRadius(10)
+                        .foregroundColor(primaryText)
                 }
                 
-                Section(header: Text("Role & Visibility")) {
-                    TextField("Role in Company (e.g. Manager)", text: Binding(
-                        get: { editableMember.jobTitle ?? "" },
-                        set: { editableMember.jobTitle = $0 }
-                    ))
-                    
-                    Toggle(isOn: $editableMember.isCompanyPublic) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Public Visibility")
-                                .font(.body)
-                            Text("Show this member on the corporate profile.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Public Visibility").font(.system(size: 16)).foregroundColor(primaryText)
+                        Text("Show this member on the corporate profile.").font(.system(size: 12)).foregroundColor(.gray)
                     }
-                    .tint(.twIndigo600)
+                    Spacer()
+                    Toggle("", isOn: $isPublic)
+                        .labelsHidden()
+                        .tint(.twIndigo600)
                 }
             }
-            .navigationTitle("Edit Member")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(
-                leading: Button("Cancel") { presentationMode.wrappedValue.dismiss() },
-                trailing: Button("Save") {
-                    Task { await viewModel.saveEditedMember(editableMember) }
+            
+            Button(action: { Task { await viewModel.saveEditedMember(id: member.id, jobTitle: jobTitle, isPublic: isPublic) } }) {
+                HStack {
+                    if viewModel.isSaving {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text("Save Changes").fontWeight(.bold)
+                    }
                 }
-                .font(.headline)
-                .disabled(viewModel.isLoading)
-            )
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.twIndigo600)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+            .disabled(viewModel.isSaving)
+            
+            Spacer()
         }
+        .padding(24)
+        .background(sheetBg.ignoresSafeArea())
     }
-}
-
-#Preview("Light Mode") {
-    let container = DIContainer()
-    
-    return EditMemberSheet(
-        viewModel: TeamViewModel(repository: container.teamRepository),
-        member: TeamMember(
-            id: "preview-id",
-            fullName: "Antonius Pramudiya",
-            email: "antonius@wraksa.com",
-            jobTitle: "CEO",
-            isCompanyPublic: true,
-            avatarUrl: nil
-        )
-    )
-    .preferredColorScheme(.light)
-}
-
-#Preview("Dark Mode") {
-    let container = DIContainer()
-    
-    return EditMemberSheet(
-        viewModel: TeamViewModel(repository: container.teamRepository),
-        member: TeamMember(
-            id: "preview-id",
-            fullName: "Antonius Pramudiya",
-            email: "antonius@wraksa.com",
-            jobTitle: "CEO",
-            isCompanyPublic: true,
-            avatarUrl: nil
-        )
-    )
-    .preferredColorScheme(.dark)
 }

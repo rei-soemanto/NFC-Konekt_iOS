@@ -3,6 +3,8 @@ import Combine
 
 @MainActor
 class AuthViewModel: ObservableObject {
+    @Published var isAuthenticated: Bool = TokenManager.shared.isLoggedIn
+    
     @Published var name = ""
     @Published var email = ""
     @Published var password = ""
@@ -25,11 +27,6 @@ class AuthViewModel: ObservableObject {
         self.repository = repository
     }
     
-    var isAuthenticated: Bool {
-        if case .authenticated = authState { return true }
-        return false
-    }
-    
     func toggleMode() {
         isLoginMode.toggle()
         errorMessage = nil
@@ -45,6 +42,12 @@ class AuthViewModel: ObservableObject {
             if isLoginMode {
                 let request = LoginRequest(email: email, password: password)
                 let response = try await repository.login(request: request)
+                
+                if let token = response.token {
+                    TokenManager.shared.saveToken(token)
+                }
+                self.isAuthenticated = true
+                
                 if let userDto = response.user {
                     authState = .authenticated(User(authDto: userDto))
                 }
@@ -55,6 +58,12 @@ class AuthViewModel: ObservableObject {
                 }
                 let request = RegisterRequest(fullName: name, email: email, password: password)
                 let response = try await repository.register(request: request)
+                
+                if let token = response.token {
+                    TokenManager.shared.saveToken(token)
+                }
+                self.isAuthenticated = true
+                
                 if let userDto = response.user {
                     authState = .authenticated(User(authDto: userDto))
                 }
@@ -66,6 +75,11 @@ class AuthViewModel: ObservableObject {
     
     func logout() {
         repository.logout()
+        
+        // 4. Erase the token from the phone!
+        TokenManager.shared.clearToken()
+        self.isAuthenticated = false
+        
         authState = .unauthenticated
         name = ""; email = ""; password = ""; confirmPassword = ""
     }

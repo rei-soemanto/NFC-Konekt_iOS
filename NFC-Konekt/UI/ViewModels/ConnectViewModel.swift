@@ -9,18 +9,49 @@ import Combine
 import Foundation
 import SwiftUI
 
+enum ConnectionStatus {
+    case notConnected, connected, selfUser
+}
+
 @MainActor
 class ConnectViewModel: ObservableObject {
+    @Published var isLoadingList: Bool = true
     @Published var isLocked: Bool = false
-    @Published var connections: [DigitalConnection] = []
+    @Published var connections: [DigitalConnectionDto] = []
     @Published var searchQuery: String = ""
     @Published var selectedIndustry: String = "All"
     
-    init() {
-        connections = [
-            DigitalConnection(id: "c1", fullName: "Antonius Pramudiya", email: "antonius@wraksa.com", avatarUrl: nil, jobTitle: "CEO", companyName: "PT. Wraksa Kencana Mukti", companyScope: "Technology", companySpeciality: "Software", companyLogoUrl: nil),
-            DigitalConnection(id: "c2", fullName: "Sarah Jenkins", email: "sarah@designco.com", avatarUrl: nil, jobTitle: "Lead Designer", companyName: "DesignCo", companyScope: "Creative", companySpeciality: "UI/UX", companyLogoUrl: nil)
-        ]
+    @Published var isScanningActive: Bool = false
+    @Published var isFetchingProfile: Bool = false
+    @Published var scannedUser: ProfileResponse? = nil
+    @Published var connectionStatus: ConnectionStatus = .notConnected
+    @Published var scanErrorMessage: String? = nil
+    
+    private let connectRepository: ConnectRepository
+    private let subscriptionRepository: SubscriptionRepository
+    
+    init(connectRepository: ConnectRepository, subscriptionRepository: SubscriptionRepository) {
+        self.connectRepository = connectRepository
+        self.subscriptionRepository = subscriptionRepository
+    }
+    
+    func loadConnections() async {
+        isLoadingList = true
+        do {
+            let subStatus = try await subscriptionRepository.getSubscriptionStatus()
+            if subStatus.status != "ACTIVE" {
+                isLocked = true
+                isLoadingList = false
+                return
+            }
+            
+            self.connections = try await connectRepository.getConnections(query: nil)
+            self.isLocked = false
+        } catch {
+            self.isLocked = true
+            print("❌ Failed to load connections: \(error)")
+        }
+        isLoadingList = false
     }
     
     var availableIndustries: [String] {
@@ -30,9 +61,9 @@ class ConnectViewModel: ObservableObject {
         return sorted
     }
     
-    var filteredConnections: [DigitalConnection] {
+    var filteredConnections: [DigitalConnectionDto] {
         connections.filter { conn in
-            let matchesSearch = searchQuery.isEmpty || 
+            let matchesSearch = searchQuery.isEmpty ||
                 conn.fullName.localizedCaseInsensitiveContains(searchQuery) ||
                 conn.email.localizedCaseInsensitiveContains(searchQuery) ||
                 (conn.jobTitle?.localizedCaseInsensitiveContains(searchQuery) ?? false) ||
@@ -40,6 +71,43 @@ class ConnectViewModel: ObservableObject {
             
             let matchesIndustry = selectedIndustry == "All" || conn.companyScope == selectedIndustry
             return matchesSearch && matchesIndustry
+        }
+    }
+    
+    func startScanning() { isScanningActive = true }
+    func cancelScanning() {
+        isScanningActive = false
+        scannedUser = nil
+        scanErrorMessage = nil
+    }
+    func resetScan() {
+        scannedUser = nil
+        scanErrorMessage = nil
+        connectionStatus = .notConnected
+    }
+    
+    func fetchScannedProfile(slug: String) async {
+        isFetchingProfile = true
+        scanErrorMessage = nil
+        isScanningActive = true
+        
+        do {
+            let response = try await connectRepository.getScannedProfile(slug: slug)
+            self.scannedUser = response
+            self.connectionStatus = .notConnected 
+        } catch {
+            self.scanErrorMessage = error.localizedDescription
+        }
+        isFetchingProfile = false
+    }
+    
+    func saveContact(userId: String) async {
+        do {
+            let _ = try await connectRepository.addConnection(slug: userId)
+            self.connectionStatus = .connected
+            await loadConnections()
+        } catch {
+            self.scanErrorMessage = error.localizedDescription
         }
     }
 }

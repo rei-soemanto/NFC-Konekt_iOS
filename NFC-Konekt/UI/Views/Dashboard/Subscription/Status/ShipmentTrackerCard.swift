@@ -60,8 +60,8 @@ struct ShipmentTrackerCard: View {
                 Divider()
                 
                 HStack {
-                    if status == "SHIPPING", let _ = viewModel.activeShipmentTracking {
-                        Button(action: { /* Open URL */ }) {
+                    if status == "SHIPPING", let urlString = viewModel.subData?.shipment?.trackingLink, let url = URL(string: urlString) {
+                        Link(destination: url) {
                             Label("Track Package", systemImage: "arrow.up.right.square")
                                 .font(.caption).fontWeight(.bold).padding(.horizontal, 16).padding(.vertical, 10)
                                 .background(Color.twIndigo600.opacity(0.1)).foregroundColor(.twIndigo600).cornerRadius(20)
@@ -69,7 +69,7 @@ struct ShipmentTrackerCard: View {
                         Spacer()
                         Button(action: { Task { await viewModel.markShipmentReceived() } }) {
                             HStack {
-                                if viewModel.isLoading {
+                                if viewModel.isActionLoading { 
                                     ProgressView().scaleEffect(0.7)
                                 } else {
                                     Label("Received", systemImage: "checkmark.seal.fill")
@@ -77,7 +77,7 @@ struct ShipmentTrackerCard: View {
                             }
                             .font(.caption).fontWeight(.bold).padding(.horizontal, 16).padding(.vertical, 10)
                             .background(Color.green).foregroundColor(.white).cornerRadius(20)
-                        }.disabled(viewModel.isLoading)
+                        }.disabled(viewModel.isActionLoading)
                     } else {
                         Text("Tracking available soon.").font(.caption).foregroundColor(.secondary).italic()
                     }
@@ -102,58 +102,5 @@ struct ShipmentTrackerCard: View {
             }
             Text(label).font(.system(size: 10, weight: .bold)).foregroundColor(isCompleted ? .twIndigo600 : .gray).textCase(.uppercase)
         }.frame(width: 80)
-    }
-}
-
-#Preview("Processing State") {
-    let container = DIContainer()
-    let viewModel = SubscriptionViewModel(repository: container.subscriptionRepository)
-    
-    return ZStack {
-        Color.twGray100.ignoresSafeArea()
-        VStack {
-            ShipmentTrackerCard(
-                viewModel: viewModel,
-                status: "PROCESSING"
-            )
-            Spacer()
-        }
-        .padding(.top)
-    }
-}
-
-#Preview("Shipping State - Dark") {
-    let container = DIContainer()
-    let viewModel = SubscriptionViewModel(repository: container.subscriptionRepository)
-    viewModel.activeShipmentTracking = "https://track.example.com/123" 
-    
-    return ZStack {
-        Color.twGray950.ignoresSafeArea()
-        VStack {
-            ShipmentTrackerCard(
-                viewModel: viewModel,
-                status: "SHIPPING"
-            )
-            Spacer()
-        }
-        .padding(.top)
-    }
-    .preferredColorScheme(.dark)
-}
-
-#Preview("Arrived State") {
-    let container = DIContainer()
-    let viewModel = SubscriptionViewModel(repository: container.subscriptionRepository)
-    
-    return ZStack {
-        Color.twGray100.ignoresSafeArea()
-        VStack {
-            ShipmentTrackerCard(
-                viewModel: viewModel,
-                status: "ARRIVED"
-            )
-            Spacer()
-        }
-        .padding(.top)
     }
 }

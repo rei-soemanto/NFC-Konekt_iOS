@@ -20,7 +20,7 @@ class TeamRepository {
         
         return TeamStatsResponse(
             currentUsage: payload.stats.totalMembers,
-            maxUsage: 10,
+            maxUsage: 10, // Assuming static or fetched elsewhere
             planName: "Corporate Plan",
             members: payload.members
         )
@@ -28,7 +28,7 @@ class TeamRepository {
     
     func addMember(request: AddTeamMemberRequest) async throws -> TeamMemberDto {
         let response: SingleMemberResponse = try await apiClient.request(
-            endpoint: "team/members",
+            endpoint: "team",
             method: "POST",
             body: request
         )
@@ -38,13 +38,13 @@ class TeamRepository {
     func updateMember(id: String, request: UpdateMemberRequest) async throws -> TeamMemberDto {
         let backendRequest = UpdateTeamMemberRequest(
             role: nil,
-            isHidden: !request.isCompanyPublic, 
+            isHidden: !request.isCompanyPublic,
             jobTitle: request.jobTitle
         )
         
         let response: SingleMemberResponse = try await apiClient.request(
-            endpoint: "team/members/\(id)",
-            method: "PUT",
+            endpoint: "team/\(id)",
+            method: "PATCH",
             body: backendRequest
         )
         return response.data
@@ -52,12 +52,8 @@ class TeamRepository {
     
     func removeMember(id: String) async throws {
         let _: EmptyResponse = try await apiClient.request(
-            endpoint: "team/members/\(id)",
+            endpoint: "team/\(id)",
             method: "DELETE"
         )
-    }
-    
-    func getTeamCards() async throws -> TeamCardsResponse {
-        return try await apiClient.request(endpoint: "team/cards", method: "GET")
     }
 }

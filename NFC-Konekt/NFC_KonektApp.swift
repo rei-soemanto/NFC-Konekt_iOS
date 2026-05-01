@@ -9,12 +9,27 @@ import SwiftUI
 
 @main
 struct NFC_KonektApp: App {
-    @StateObject private var container = DIContainer()
+    let container = DIContainer()
+    @StateObject var authViewModel: AuthViewModel
     
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
+    
+    init() {
+        _authViewModel = StateObject(wrappedValue: AuthViewModel(repository: DIContainer().authRepository))
+    }
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(container)
+            Group {
+                if authViewModel.isAuthenticated {
+                    DashboardView()
+                        .environmentObject(container)
+                } else {
+                    AuthenticationView(viewModel: authViewModel)
+                }
+            }
+            .environmentObject(authViewModel)
+            .preferredColorScheme(isDarkMode ? .dark : .light)
         }
     }
 }

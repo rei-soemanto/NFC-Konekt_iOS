@@ -5,12 +5,6 @@
 
 import Foundation
 
-enum UserSubscriptionState {
-    case teamMember(managerName: String)
-    case noSubscription
-    case active
-}
-
 struct SubInfo {
     var planId: String
     var status: String

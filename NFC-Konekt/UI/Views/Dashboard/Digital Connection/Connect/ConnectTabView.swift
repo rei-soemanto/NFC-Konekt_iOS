@@ -8,69 +8,97 @@
 import SwiftUI
 
 struct ConnectTabView: View {
-    @StateObject private var viewModel = ConnectViewModel()
+    @ObservedObject var viewModel: ConnectViewModel
     @Environment(\.colorScheme) var colorScheme
     
     var appBackground: Color { colorScheme == .dark ? .twGray950 : .twGray100 }
     
     var body: some View {
         NavigationView {
-            ZStack {
+            ZStack(alignment: .bottomTrailing) {
                 appBackground.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Header
-                    Text("My Connections")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
-                        .padding(.top, 10)
-                        .padding(.bottom, 16)
-                    
-                    if viewModel.isLocked {
+                    if viewModel.isScanningActive || viewModel.scannedUser != nil || viewModel.isFetchingProfile {
+                        ScannerOverlayView(viewModel: viewModel)
+                    } else if viewModel.isLocked {
                         LockedNetworkView()
                     } else {
-                        VStack(spacing: 12) {
+                        // Main Connections List
+                        VStack(spacing: 0) {
+                            Text("Digital Network").font(.title2).fontWeight(.bold).frame(maxWidth: .infinity, alignment: .leading).padding()
+                            
                             HStack {
                                 HStack {
                                     Image(systemName: "magnifyingglass").foregroundColor(.gray)
-                                    TextField("Search name, job...", text: $viewModel.searchQuery)
-                                        .disableAutocorrection(true)
+                                    TextField("Search network...", text: $viewModel.searchQuery).disableAutocorrection(true)
                                 }
-                                .padding(10)
-                                .background(colorScheme == .dark ? Color.black.opacity(0.3) : Color(.systemGray6))
-                                .cornerRadius(10)
+                                .padding(10).background(colorScheme == .dark ? Color.black.opacity(0.3) : Color(.systemGray6)).cornerRadius(10)
                                 
                                 FilterConnectionMenu(title: "Industry", selection: $viewModel.selectedIndustry, options: viewModel.availableIndustries)
-                            }
-                            .padding(.horizontal)
+                            }.padding(.horizontal)
                             
-                            ScrollView {
-                                LazyVStack(spacing: 12) {
-                                    if viewModel.filteredConnections.isEmpty {
-                                        EmptyConnectionView(icon: "person.2.slash", title: "No Connections", message: "Try adjusting your filters or search.")
-                                    } else {
-                                        ForEach(viewModel.filteredConnections) { conn in
-                                            DigitalConnectionRow(connection: conn)
+                            if viewModel.isLoadingList {
+                                Spacer()
+                                ProgressView()
+                                Spacer()
+                            } else {
+                                ScrollView {
+                                    LazyVStack(spacing: 12) {
+                                        if viewModel.filteredConnections.isEmpty {
+                                            EmptyConnectionView(icon: "magnifyingglass", title: "No Results", message: "Try adjusting your filters or search.").padding(.top, 40)
+                                        } else {
+                                            ForEach(viewModel.filteredConnections) { conn in
+                                                DigitalConnectionRow(connection: conn)
+                                            }
                                         }
-                                    }
+                                    }.padding()
                                 }
-                                .padding()
+                                .refreshable { await viewModel.loadConnections() }
                             }
                         }
                     }
                 }
+                
+                if !viewModel.isScanningActive && viewModel.scannedUser == nil && !viewModel.isLocked {
+                    Button(action: { viewModel.startScanning() }) {
+                        HStack {
+                            Image(systemName: "wave.3.right")
+                            Text("Scan Card").fontWeight(.bold)
+                        }
+                        .padding(.horizontal, 20).padding(.vertical, 16)
+                        .background(Color.twIndigo600).foregroundColor(.white).cornerRadius(16)
+                        .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
+                    }
+                    .padding()
+                }
             }
             .navigationBarHidden(true)
+        }
+        .task {
+            if viewModel.connections.isEmpty {
+                await viewModel.loadConnections()
+            }
         }
     }
 }
 
 #Preview("Light Mode") {
-    ConnectTabView().preferredColorScheme(.light)
+    let container = DIContainer()
+    return ConnectTabView(
+        viewModel: ConnectViewModel(
+            connectRepository: container.connectRepository,
+            subscriptionRepository: container.subscriptionRepository
+        )
+    ).preferredColorScheme(.light)
 }
 
 #Preview("Dark Mode") {
-    ConnectTabView().preferredColorScheme(.dark)
+    let container = DIContainer()
+    return ConnectTabView(
+        viewModel: ConnectViewModel(
+            connectRepository: container.connectRepository,
+            subscriptionRepository: container.subscriptionRepository
+        )
+    ).preferredColorScheme(.dark)
 }

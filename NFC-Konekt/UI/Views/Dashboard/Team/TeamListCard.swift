@@ -54,7 +54,7 @@ struct TeamListCard: View {
                 .background(cardBackground)
             } else {
                 LazyVStack(spacing: 0) {
-                    ForEach(viewModel.members) { member in
+                    ForEach(viewModel.members, id: \.id) { member in
                         TeamMemberRow(
                             member: member,
                             isDeleting: deletingId == member.id,
@@ -79,35 +79,4 @@ struct TeamListCard: View {
         .shadow(color: shadowColor, radius: 8, x: 0, y: 4)
         .padding(.horizontal)
     }
-}
-
-#Preview("With Members") {
-    let container = DIContainer()
-    let viewModel = TeamViewModel(repository: container.teamRepository)
-    
-    return ZStack {
-        Color.twGray100.ignoresSafeArea()
-        
-        ScrollView {
-            TeamListCard(viewModel: viewModel)
-                .padding(.vertical)
-        }
-    }
-    .preferredColorScheme(.light)
-}
-
-#Preview("Empty State") {
-    let container = DIContainer()
-    let emptyViewModel = TeamViewModel(repository: container.teamRepository)
-    emptyViewModel.members = []
-    
-    return ZStack {
-        Color.twGray950.ignoresSafeArea()
-        
-        ScrollView {
-            TeamListCard(viewModel: emptyViewModel)
-                .padding(.vertical)
-        }
-    }
-    .preferredColorScheme(.dark)
 }

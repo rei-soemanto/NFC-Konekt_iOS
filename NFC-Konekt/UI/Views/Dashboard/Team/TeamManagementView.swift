@@ -47,9 +47,11 @@ struct TeamManagementView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $viewModel.showAddMemberSheet) {
             AddMemberSheet(viewModel: viewModel)
+                .presentationDetents([.height(400)])
         }
         .sheet(item: $viewModel.editingMember) { member in
             EditMemberSheet(viewModel: viewModel, member: member)
+                .presentationDetents([.height(400)]) 
         }
         .task {
             await viewModel.loadTeam()

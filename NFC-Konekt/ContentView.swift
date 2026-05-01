@@ -11,6 +11,8 @@ struct ContentView: View {
     @StateObject private var container = DIContainer()
     @StateObject private var authViewModel: AuthViewModel
     
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
+    
     init() {
         let rootContainer = DIContainer()
         _container = StateObject(wrappedValue: rootContainer)
@@ -20,7 +22,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authViewModel.isAuthenticated {
-                DashboardView(repository: container.dashboardRepository)
+                DashboardView()
                     .environmentObject(authViewModel)
             } else {
                 AuthenticationView(viewModel: authViewModel)
@@ -29,15 +31,10 @@ struct ContentView: View {
         }
         .environmentObject(container)
         .animation(.easeInOut, value: authViewModel.isAuthenticated)
+        .preferredColorScheme(isDarkMode ? .dark : .light)
     }
 }
 
-#Preview("Light Mode") {
+#Preview("Preview") {
     ContentView()
-        .preferredColorScheme(.light)
-}
-
-#Preview("Dark Mode") {
-    ContentView()
-        .preferredColorScheme(.dark)
 }

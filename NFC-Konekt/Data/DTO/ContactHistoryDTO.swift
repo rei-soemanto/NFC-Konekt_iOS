@@ -21,7 +21,7 @@ struct ErrorResponse: Decodable {
     let error: String
 }
 
-struct DigitalConnectionDto: Decodable {
+struct DigitalConnectionDto: Decodable, Identifiable {
     let id: String
     let fullName: String
     let email: String
@@ -33,9 +33,9 @@ struct DigitalConnectionDto: Decodable {
     let companyLogoUrl: String?
 }
 
-struct ContactBaseResponse: Decodable {
+struct ConnectionBaseResponse: Decodable {
     let success: Bool
-    let data: [PhysicalContactDto]
+    let data: [DigitalConnectionDto]
 }
 
 struct PhysicalContactDto: Decodable, Identifiable {
@@ -48,6 +48,11 @@ struct PhysicalContactDto: Decodable, Identifiable {
     let jobTitle: String?
     let notes: String?
     let isRegisteredMember: Bool
+}
+
+struct ContactBaseResponse: Decodable {
+    let success: Bool
+    let data: [PhysicalContactDto]
 }
 
 struct HistoryResponse: Decodable {

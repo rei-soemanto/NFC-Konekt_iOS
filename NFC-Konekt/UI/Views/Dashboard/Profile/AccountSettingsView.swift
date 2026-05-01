@@ -13,9 +13,13 @@ struct AccountSettingsView: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var container: DIContainer
     
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
+    
     @State private var isDrawerOpen = false
     
-    // Inject Repository
+    @State private var navigateToTeam = false
+    @State private var navigateToSubscription = false
+    
     init(repository: ProfileRepository) {
         _profileViewModel = StateObject(wrappedValue: AccountViewModel(repository: repository))
     }
@@ -27,31 +31,41 @@ struct AccountSettingsView: View {
     var dangerZoneBg: Color { colorScheme == .dark ? Color.red.opacity(0.1) : Color.red.opacity(0.05) }
     
     var body: some View {
-        ZStack(alignment: .trailing) {
-            
-            // 1. Main View Content
-            mainContent
-            
-            // 2. Dimmed Overlay when drawer is open
-            if isDrawerOpen {
-                Color.black.opacity(0.4)
-                    .ignoresSafeArea()
-                    .onTapGesture { withAnimation(.easeInOut) { isDrawerOpen = false } }
-                    .transition(.opacity)
-                    .zIndex(1)
+        NavigationView {
+            ZStack(alignment: .trailing) {
+                
+                mainContent
+                
+                if isDrawerOpen {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                        .onTapGesture { withAnimation(.easeInOut) { isDrawerOpen = false } }
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
+                
+                drawerMenu
+                
+                NavigationLink(
+                    destination: TeamManagementView(repository: container.teamRepository),
+                    isActive: $navigateToTeam
+                ) {
+                    EmptyView()
+                }
+                
+                NavigationLink(
+                    destination: SubscriptionStatusView(repository: container.subscriptionRepository),
+                    isActive: $navigateToSubscription
+                ) {
+                    EmptyView()
+                }
             }
-            
-            // 3. Right-Side Drawer
-            drawerMenu
+            .navigationBarHidden(true)
         }
-        .navigationBarHidden(true)
     }
-    
-    // MARK: - Subviews extracted to help the SwiftUI Compiler
     
     private var mainContent: some View {
         VStack(spacing: 0) {
-            // Custom Top App Bar
             HStack {
                 Spacer()
                 Button(action: { withAnimation(.easeInOut) { isDrawerOpen = true } }) {
@@ -109,12 +123,24 @@ struct AccountSettingsView: View {
             
             Divider().background(Color.gray.opacity(0.2))
             
-            Button(action: { isDrawerOpen = false }) {
+            Button(action: {
+                withAnimation(.easeInOut) { isDrawerOpen = false }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    navigateToTeam = true
+                }
+            }) {
                 Label("Manage Team", systemImage: "person.3.sequence")
                     .padding().foregroundColor(primaryText)
             }
             
-            Button(action: { isDrawerOpen = false }) {
+            Button(action: {
+                withAnimation(.easeInOut) { isDrawerOpen = false }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    navigateToSubscription = true
+                }
+            }) {
                 Label("Subscription Status", systemImage: "star")
                     .padding().foregroundColor(primaryText)
             }
@@ -123,10 +149,10 @@ struct AccountSettingsView: View {
             Divider().background(Color.gray.opacity(0.2))
             
             HStack {
-                Label("Dark Mode", systemImage: colorScheme == .dark ? "moon" : "sun.max")
+                Label("Dark Mode", systemImage: isDarkMode ? "moon" : "sun.max")
                     .foregroundColor(primaryText)
                 Spacer()
-                Toggle("", isOn: .constant(colorScheme == .dark))
+                Toggle("", isOn: $isDarkMode)
                     .labelsHidden()
                     .scaleEffect(0.8)
             }
@@ -137,7 +163,7 @@ struct AccountSettingsView: View {
                 authViewModel.logout()
             }) {
                 Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
-                    .fontWeight(.bold) // <--- FIXED HERE
+                    .fontWeight(.bold)
                     .foregroundColor(.red)
                     .padding()
             }
@@ -150,23 +176,11 @@ struct AccountSettingsView: View {
     }
 }
 
-// MARK: - Previews
-#Preview("Light Mode") {
+#Preview("Preview") {
     let container = DIContainer()
     let authVM = AuthViewModel(repository: container.authRepository)
     
     return AccountSettingsView(repository: container.profileRepository)
         .environmentObject(authVM)
         .environmentObject(container)
-        .preferredColorScheme(.light)
-}
-
-#Preview("Dark Mode") {
-    let container = DIContainer()
-    let authVM = AuthViewModel(repository: container.authRepository)
-    
-    return AccountSettingsView(repository: container.profileRepository)
-        .environmentObject(authVM)
-        .environmentObject(container)
-        .preferredColorScheme(.dark)
 }

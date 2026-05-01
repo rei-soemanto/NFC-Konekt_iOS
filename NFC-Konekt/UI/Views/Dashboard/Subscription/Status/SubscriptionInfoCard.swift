@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SubscriptionInfoCard: View {
     @ObservedObject var viewModel: SubscriptionViewModel
-    let sub: SubInfo
+    let sub: SubscriptionStatusData 
     @Environment(\.colorScheme) var colorScheme
     
     var cardBg: Color { colorScheme == .dark ? .twGray900 : .white }
@@ -31,7 +31,7 @@ struct SubscriptionInfoCard: View {
                             
                             statusBadge
                         }
-                        Text(isCanceled ? "Access remains active until \(sub.endDate)." : "Next billing cycle starts on \(sub.nextBillDate).")
+                        Text(isCanceled ? "Access remains active until \(sub.endDate)." : "Next billing cycle starts on \(sub.nextBillDate ?? "").")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -40,7 +40,9 @@ struct SubscriptionInfoCard: View {
                 
                 HStack(spacing: 12) {
                     if !isCanceled {
-                        Button(action: {}) {
+                        Button(action: {
+                            Task { await viewModel.initiateRenewal() }
+                        }) {
                             Label("Renew", systemImage: "arrow.triangle.2.circlepath")
                                 .font(.caption)
                                 .fontWeight(.bold)
@@ -52,7 +54,7 @@ struct SubscriptionInfoCard: View {
                         }
                     }
                     if !isExpired && !isCanceled {
-                        Button(action: {}) {
+                        Button(action: { viewModel.onUpgradeClicked() }) {
                             Label("Change Plan", systemImage: "arrow.up")
                                 .font(.caption)
                                 .fontWeight(.bold)
@@ -124,7 +126,7 @@ struct SubscriptionInfoCard: View {
             
             VStack(spacing: 8) {
                 HStack {
-                    Text("\(sub.remainingDays) Days Left").font(.caption).fontWeight(.bold).foregroundColor(.twIndigo600)
+                    Text("\(sub.daysLeft) Days Left").font(.caption).fontWeight(.bold).foregroundColor(.twIndigo600)
                     Spacer()
                     Text(sub.endDate).font(.caption).foregroundColor(.secondary)
                 }
@@ -132,7 +134,7 @@ struct SubscriptionInfoCard: View {
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.2)).frame(height: 8)
                         RoundedRectangle(cornerRadius: 4).fill(Color.twIndigo600)
-                            .frame(width: geo.size.width * CGFloat(sub.progressPercentage / 100), height: 8)
+                            .frame(width: geo.size.width * CGFloat((sub.progressPercentage ?? 0) / 100), height: 8)
                     }
                 }.frame(height: 8)
             }
@@ -140,29 +142,34 @@ struct SubscriptionInfoCard: View {
     }
     
     private var expansionSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Expansion Packs")
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-            
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle().fill(Color.orange.opacity(0.2)).frame(width: 40, height: 40)
-                    Image(systemName: "square.stack.3d.up.fill").foregroundColor(.orange)
+        Group {
+            if let packs = sub.expansionPacks, packs > 0 {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Expansion Packs")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                    
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle().fill(Color.orange.opacity(0.2)).frame(width: 40, height: 40)
+                            Image(systemName: "square.stack.3d.up.fill").foregroundColor(.orange)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(packs) Active Pack(s)").font(.subheadline).fontWeight(.bold).foregroundColor(primaryText)
+                            Text("+\(packs * 10) Team Members").font(.caption).foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding()
+                    .background(Color.orange.opacity(0.05))
+                    .cornerRadius(12)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange.opacity(0.2), lineWidth: 1))
                 }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(sub.expansionPacks) Active Pack(s)").font(.subheadline).fontWeight(.bold).foregroundColor(primaryText)
-                    Text("+\(sub.expansionPacks * 10) Team Members").font(.caption).foregroundColor(.secondary)
-                }
-                Spacer()
-                Button("Buy More") {}.font(.caption).fontWeight(.bold).foregroundColor(.orange)
+            } else {
+                EmptyView()
             }
-            .padding()
-            .background(Color.orange.opacity(0.05))
-            .cornerRadius(12)
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange.opacity(0.2), lineWidth: 1))
         }
     }
     
@@ -183,27 +190,27 @@ struct SubscriptionInfoCard: View {
             } else {
                 VStack(spacing: 12) {
                     HStack {
-                        Text("\(sub.planName) (\(sub.planDurationLabel))").font(.subheadline).foregroundColor(.secondary)
+                        Text("\(sub.planName) (\(sub.planDurationLabel ?? "N/A"))").font(.subheadline).foregroundColor(.secondary)
                         Spacer()
-                        Text("\(sub.currency) \(viewModel.formatCurrency(sub.planPrice))").font(.subheadline).foregroundColor(primaryText)
+                        Text("\(sub.currency ?? "IDR") \(viewModel.formatCurrency(sub.planPrice ?? 0))").font(.subheadline).foregroundColor(primaryText)
                     }
-                    if sub.expansionPacks > 0 {
+                    if let packs = sub.expansionPacks, packs > 0, let packPrice = sub.expansionPrice {
                         HStack {
                             VStack(alignment: .leading) {
-                                Text("Expansion x \(sub.expansionPacks)").font(.subheadline).foregroundColor(.secondary)
-                                Text("(\(sub.currency) \(viewModel.formatCurrency(sub.expansionPrice)) / pack)").font(.caption2).foregroundColor(.gray)
+                                Text("Expansion x \(packs)").font(.subheadline).foregroundColor(.secondary)
+                                Text("(\(sub.currency ?? "IDR") \(viewModel.formatCurrency(packPrice)) / pack)").font(.caption2).foregroundColor(.gray)
                             }
                             Spacer()
-                            Text("\(sub.currency) \(viewModel.formatCurrency(sub.expansionPrice * sub.expansionPacks))").font(.subheadline).foregroundColor(primaryText)
+                            Text("\(sub.currency ?? "IDR") \(viewModel.formatCurrency(packPrice * packs))").font(.subheadline).foregroundColor(primaryText)
                         }
                     }
                     Divider()
                     HStack {
                         Text("Total Due").font(.headline).foregroundColor(primaryText)
                         Spacer()
-                        Text("\(sub.currency) \(viewModel.formatCurrency(sub.nextBillAmount))").font(.headline).foregroundColor(.twIndigo600)
+                        Text("\(sub.currency ?? "IDR") \(viewModel.formatCurrency(sub.nextBillAmount ?? 0))").font(.headline).foregroundColor(.twIndigo600)
                     }
-                    Text("Due Date: \(sub.nextBillDate)").font(.caption).foregroundColor(.secondary).frame(maxWidth: .infinity, alignment: .trailing)
+                    Text("Due Date: \(sub.nextBillDate ?? "N/A")").font(.caption).foregroundColor(.secondary).frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 .padding()
                 .background(colorScheme == .dark ? Color.gray.opacity(0.1) : Color(.systemGray6))
@@ -211,68 +218,4 @@ struct SubscriptionInfoCard: View {
             }
         }
     }
-}
-
-#Preview("Active Subscription") {
-    let container = DIContainer()
-    let vm = SubscriptionViewModel(repository: container.subscriptionRepository)
-    
-    let mockSub = SubInfo(
-        planId: "mock_123",
-        status: "ACTIVE",
-        startDate: "18 April 2025",
-        endDate: "18 April 2026",
-        expansionPacks: 2,
-        planName: "Corporate Pro",
-        planPrice: 1500000,
-        planDurationLabel: "1 Year",
-        expansionPrice: 500000,
-        currency: "IDR",
-        nextBillAmount: 2500000,
-        nextBillDate: "18 April 2026",
-        remainingDays: 14,
-        progressPercentage: 96.0
-    )
-    
-    return ZStack {
-        Color.twGray100.ignoresSafeArea()
-        
-        ScrollView {
-            SubscriptionInfoCard(viewModel: vm, sub: mockSub)
-                .padding(.vertical)
-        }
-    }
-    .preferredColorScheme(.light)
-}
-
-#Preview("Canceled State - Dark") {
-    let container = DIContainer()
-    let vm = SubscriptionViewModel(repository: container.subscriptionRepository)
-    
-    let mockSub = SubInfo(
-        planId: "mock_123",
-        status: "CANCELED",
-        startDate: "18 April 2025",
-        endDate: "18 April 2026",
-        expansionPacks: 1,
-        planName: "Personal Pro",
-        planPrice: 500000,
-        planDurationLabel: "1 Month",
-        expansionPrice: 100000,
-        currency: "IDR",
-        nextBillAmount: 0,
-        nextBillDate: "N/A",
-        remainingDays: 5,
-        progressPercentage: 85.0
-    )
-    
-    return ZStack {
-        Color.twGray950.ignoresSafeArea()
-        
-        ScrollView {
-            SubscriptionInfoCard(viewModel: vm, sub: mockSub)
-                .padding(.vertical)
-        }
-    }
-    .preferredColorScheme(.dark)
 }

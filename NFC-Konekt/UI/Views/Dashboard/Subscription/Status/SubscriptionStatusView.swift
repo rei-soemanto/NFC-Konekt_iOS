@@ -10,7 +10,6 @@ import SwiftUI
 struct SubscriptionStatusView: View {
     @StateObject private var viewModel: SubscriptionViewModel
     
-    // Custom initializer to inject the repository into the StateObject
     init(repository: SubscriptionRepository) {
         _viewModel = StateObject(wrappedValue: SubscriptionViewModel(repository: repository))
     }
@@ -18,7 +17,6 @@ struct SubscriptionStatusView: View {
     var body: some View {
         SubscriptionStatusViewContent(viewModel: viewModel)
             .task {
-                // Fetch real data from the backend when the view appears
                 await viewModel.loadData()
             }
     }
@@ -35,38 +33,73 @@ struct SubscriptionStatusViewContent: View {
         ZStack {
             appBackground.ignoresSafeArea()
             
-            ScrollView {
-                VStack(spacing: 24) {
-                    headerSection
-                    
-                    // Display different UI based on the live subscription state
-                    switch viewModel.viewState {
-                    case .teamMember(let managerName):
-                        TeamMemberPlaceholder(managerName: managerName)
-                    case .noSubscription:
-                        NoSubscriptionPlaceholder()
-                    case .active:
-                        if let sub = viewModel.subData {
-                            SubscriptionInfoCard(viewModel: viewModel, sub: sub)
-                            
-                            if let shipStatus = viewModel.activeShipmentStatus {
-                                ShipmentTrackerCard(viewModel: viewModel, status: shipStatus)
-                            }
-                            
-                            // Ensure TransactionHistoryCard also accepts the view model properly if it needs it!
-                            TransactionHistoryCard(viewModel: viewModel)
+            if viewModel.isLoading {
+                ProgressView()
+                    .scaleEffect(1.5)
+            } else {
+                ScrollView {
+                    VStack(spacing: 24) {
+                        headerSection
+                        
+                        if let error = viewModel.errorMessage {
+                            Text("Error: \(error)")
+                                .foregroundColor(.red)
+                                .padding()
                         }
+                        
+                        switch viewModel.viewState {
+                        case .teamMember(let managerName):
+                            TeamMemberPlaceholder(managerName: managerName)
+                        case .noSubscription:
+                            NoSubscriptionPlaceholder()
+                        case .active:
+                            if let sub = viewModel.subData {
+                                SubscriptionInfoCard(viewModel: viewModel, sub: sub)
+                                
+                                if let shipStatus = sub.shipment?.status {
+                                    ShipmentTrackerCard(viewModel: viewModel, status: shipStatus)
+                                }
+                                
+                                TransactionHistoryCard(viewModel: viewModel)
+                            }
+                        }
+                        
+                        Spacer(minLength: 40)
                     }
-                    
-                    Spacer(minLength: 40)
                 }
             }
             
             if viewModel.showCancelModal {
                 CancelSubscriptionModal(viewModel: viewModel)
             }
+            
+            if viewModel.isActionLoading {
+                ZStack {
+                    Color.black.opacity(0.3).ignoresSafeArea()
+                    ProgressView().padding().background(Color(.systemBackground)).cornerRadius(12)
+                }
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $viewModel.showUpgradeSheet) {
+            UpgradeDurationSheet(viewModel: viewModel)
+                .presentationDetents([.height(300)])
+        }
+        .alert(isPresented: $viewModel.showCorporateUpgradeWarning) {
+            Alert(
+                title: Text("Web Portal Required"),
+                message: Text("Corporate plan expansions and upgrades require team configuration. Please log in to the web portal to manage your corporate account."),
+                dismissButton: .default(Text("Understood"))
+            )
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { viewModel.paymentUrl != nil },
+            set: { if !$0 { viewModel.closePaymentWebView() } }
+        )) {
+            if let url = viewModel.paymentUrl {
+                PaymentWebViewContainer(urlString: url, onClose: { viewModel.closePaymentWebView() })
+            }
+        }
     }
     
     private var headerSection: some View {
@@ -83,46 +116,4 @@ struct SubscriptionStatusViewContent: View {
         .padding(.horizontal)
         .padding(.top, 10)
     }
-}
-
-#Preview("Active Plan - Light") {
-    let container = DIContainer()
-    let vm = SubscriptionViewModel(repository: container.subscriptionRepository)
-    
-    vm.subData = SubInfo(
-        planId: "p1", status: "ACTIVE", startDate: "2024-01-01", endDate: "2025-01-01",
-        expansionPacks: 1, planName: "Pro Plan", planPrice: 100000,
-        planDurationLabel: "Yearly", expansionPrice: 20000, currency: "USD",
-        nextBillAmount: 120000, nextBillDate: "2025-01-01", remainingDays: 250,
-        progressPercentage: 30.0
-    )
-    
-    return NavigationView {
-        SubscriptionStatusViewContent(viewModel: vm)
-    }
-    .environmentObject(container)
-    .preferredColorScheme(.light)
-}
-
-#Preview("Team Member State") {
-    let container = DIContainer()
-    let teamVM = SubscriptionViewModel(repository: container.subscriptionRepository)
-    teamVM.viewState = .teamMember(managerName: "Antonius Pramudiya")
-    
-    return NavigationView {
-        SubscriptionStatusViewContent(viewModel: teamVM)
-    }
-    .environmentObject(container)
-}
-
-#Preview("No Plan State - Dark") {
-    let container = DIContainer()
-    let emptyVM = SubscriptionViewModel(repository: container.subscriptionRepository)
-    emptyVM.viewState = .noSubscription
-    
-    return NavigationView {
-        SubscriptionStatusViewContent(viewModel: emptyVM)
-    }
-    .environmentObject(container)
-    .preferredColorScheme(.dark)
 }

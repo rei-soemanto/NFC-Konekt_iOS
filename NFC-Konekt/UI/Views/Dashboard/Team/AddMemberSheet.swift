@@ -9,51 +9,66 @@ import SwiftUI
 
 struct AddMemberSheet: View {
     @ObservedObject var viewModel: TeamViewModel
-    @Environment(\.presentationMode) var presentationMode
     @Environment(\.colorScheme) var colorScheme
     
-    var inputBackground: Color { colorScheme == .dark ? Color.black.opacity(0.3) : Color(.systemGray6) }
+    var sheetBg: Color { colorScheme == .dark ? .twGray900 : .white }
+    var inputBg: Color { colorScheme == .dark ? Color.black.opacity(0.3) : Color(.systemGray6) }
+    var primaryText: Color { colorScheme == .dark ? .white : .twGray900 }
     
     var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("New Member Details")) {
-                    TextField("Full Name", text: $viewModel.newMemberName)
-                        .textContentType(.name)
-                    
-                    TextField("Email Address", text: $viewModel.newMemberEmail)
+        VStack(spacing: 24) {
+            Text("Add New Member")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(primaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Full Name").font(.caption).foregroundColor(.gray)
+                    TextField("", text: $viewModel.newMemberName)
+                        .padding()
+                        .background(inputBg)
+                        .cornerRadius(10)
+                        .foregroundColor(primaryText)
+                }
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Email Address").font(.caption).foregroundColor(.gray)
+                    TextField("", text: $viewModel.newMemberEmail)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
-                }
-                
-                Section(footer: Text("Digital cards are activated instantly. The new member will receive an email to set their password.")) {
+                        .padding()
+                        .background(inputBg)
+                        .cornerRadius(10)
+                        .foregroundColor(primaryText)
                 }
             }
-            .navigationTitle("Add Member")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(
-                leading: Button("Cancel") { presentationMode.wrappedValue.dismiss() },
-                trailing: Button("Add") {
-                    Task { await viewModel.addMember() }
+            
+            Text("Digital cards are activated instantly. The new member will receive an email to set their password.")
+                .font(.system(size: 12))
+                .foregroundColor(.gray)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            Button(action: { Task { await viewModel.addMember() } }) {
+                HStack {
+                    if viewModel.isSaving {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text("Add Member").fontWeight(.bold)
+                    }
                 }
-                .font(.headline)
-                .disabled(viewModel.newMemberName.isEmpty || viewModel.newMemberEmail.isEmpty || viewModel.isLoading)
-            )
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.twIndigo600)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+            .disabled(viewModel.newMemberName.isEmpty || viewModel.newMemberEmail.isEmpty || viewModel.isSaving)
+            
+            Spacer()
         }
+        .padding(24)
+        .background(sheetBg.ignoresSafeArea())
     }
-}
-
-#Preview("Light Mode") {
-    let container = DIContainer()
-    
-    return AddMemberSheet(viewModel: TeamViewModel(repository: container.teamRepository))
-        .preferredColorScheme(.light)
-}
-
-#Preview("Dark Mode") {
-    let container = DIContainer()
-    
-    return AddMemberSheet(viewModel: TeamViewModel(repository: container.teamRepository))
-        .preferredColorScheme(.dark)
 }

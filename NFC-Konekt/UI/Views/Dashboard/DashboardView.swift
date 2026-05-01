@@ -8,14 +8,10 @@
 import SwiftUI
 
 struct DashboardView: View {
-    @StateObject private var viewModel: DashboardViewModel
+    @StateObject private var viewModel = DashboardViewModel(repository: DIContainer().dashboardRepository)
+    
     @EnvironmentObject var authViewModel: AuthViewModel
-    
     @EnvironmentObject var container: DIContainer
-    
-    init(repository: DashboardRepository) {
-        _viewModel = StateObject(wrappedValue: DashboardViewModel(repository: repository))
-    }
     
     var body: some View {
         TabView {
@@ -33,7 +29,7 @@ struct DashboardView: View {
                 Label("History", systemImage: "clock.arrow.circlepath")
             }
             
-            ConnectTabView()
+            ConnectTabView(viewModel: ConnectViewModel(connectRepository: container.connectRepository, subscriptionRepository: container.subscriptionRepository))
                 .tabItem {
                     Label("Connect", systemImage: "person.2.fill")
                 }

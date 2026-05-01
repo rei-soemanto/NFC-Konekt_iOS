@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct TeamMemberRow: View {
-    let member: TeamMember
+    let member: TeamMemberDto // 👈 Updated to DTO
     let isDeleting: Bool
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -31,17 +31,16 @@ struct TeamMemberRow: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(member.fullName)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(primaryText)
                 
                 HStack(spacing: 6) {
                     Text(member.email)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray)
                     
                     if let job = member.jobTitle, !job.isEmpty {
-                        Text(job)
+                        Text(job.uppercased())
                             .font(.system(size: 9, weight: .bold))
                             .padding(.horizontal, 4).padding(.vertical, 2)
                             .background(Color.twIndigo600.opacity(0.1))
@@ -49,7 +48,7 @@ struct TeamMemberRow: View {
                             .cornerRadius(4)
                     }
                     
-                    if !member.isCompanyPublic {
+                    if member.isCompanyPublic == false {
                         HStack(spacing: 2) {
                             Image(systemName: "eye.slash.fill")
                             Text("HIDDEN")
@@ -65,106 +64,28 @@ struct TeamMemberRow: View {
             
             Spacer()
             
-            HStack(spacing: 8) {
+            HStack(spacing: 4) {
                 Button(action: onEdit) {
                     Image(systemName: "pencil")
-                        .font(.caption)
+                        .font(.system(size: 14))
                         .foregroundColor(.gray)
-                        .padding(8)
-                        .background(colorScheme == .dark ? Color.white.opacity(0.1) : Color.gray.opacity(0.1))
-                        .cornerRadius(8)
+                        .frame(width: 32, height: 32)
                 }
                 
                 Button(action: onDelete) {
                     if isDeleting {
                         ProgressView().scaleEffect(0.6)
-                            .frame(width: 30, height: 30)
+                            .frame(width: 32, height: 32)
                     } else {
                         Image(systemName: "trash.fill")
-                            .font(.caption)
+                            .font(.system(size: 14))
                             .foregroundColor(.red)
-                            .padding(8)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(8)
+                            .frame(width: 32, height: 32)
                     }
                 }
                 .disabled(isDeleting)
             }
         }
-        .padding()
+        .padding(16)
     }
-}
-
-#Preview("Light Mode") {
-    ZStack {
-        Color.twGray100.ignoresSafeArea()
-        
-        VStack(spacing: 0) {
-            TeamMemberRow(
-                member: TeamMember(id: "1", fullName: "Antonius Pramudiya", email: "antonius@wraksa.com", jobTitle: "CEO", isCompanyPublic: true, avatarUrl: nil),
-                isDeleting: false,
-                onEdit: {},
-                onDelete: {}
-            )
-            
-            Divider().padding(.leading, 64)
-            
-            TeamMemberRow(
-                member: TeamMember(id: "2", fullName: "Budi Santoso", email: "budi@wraksa.com", jobTitle: "Engineer", isCompanyPublic: false, avatarUrl: nil),
-                isDeleting: false,
-                onEdit: {},
-                onDelete: {}
-            )
-            
-            Divider().padding(.leading, 64)
-            
-            TeamMemberRow(
-                member: TeamMember(id: "3", fullName: "Sarah Jenkins", email: "sarah@wraksa.com", jobTitle: nil, isCompanyPublic: true, avatarUrl: nil),
-                isDeleting: true,
-                onEdit: {},
-                onDelete: {}
-            )
-        }
-        .background(Color.white)
-        .cornerRadius(16)
-        .padding()
-    }
-    .preferredColorScheme(.light)
-}
-
-#Preview("Dark Mode") {
-    ZStack {
-        Color.twGray950.ignoresSafeArea()
-        
-        VStack(spacing: 0) {
-            TeamMemberRow(
-                member: TeamMember(id: "1", fullName: "Antonius Pramudiya", email: "antonius@wraksa.com", jobTitle: "CEO", isCompanyPublic: true, avatarUrl: nil),
-                isDeleting: false,
-                onEdit: {},
-                onDelete: {}
-            )
-            
-            Divider().padding(.leading, 64)
-            
-            TeamMemberRow(
-                member: TeamMember(id: "2", fullName: "Budi Santoso", email: "budi@wraksa.com", jobTitle: "Engineer", isCompanyPublic: false, avatarUrl: nil),
-                isDeleting: false,
-                onEdit: {},
-                onDelete: {}
-            )
-            
-            Divider().padding(.leading, 64)
-            
-            TeamMemberRow(
-                member: TeamMember(id: "3", fullName: "Sarah Jenkins", email: "sarah@wraksa.com", jobTitle: nil, isCompanyPublic: true, avatarUrl: nil),
-                isDeleting: true,
-                onEdit: {},
-                onDelete: {}
-            )
-        }
-        .background(Color.twGray900)
-        .cornerRadius(16)
-        .padding()
-    }
-    .preferredColorScheme(.dark)
 }

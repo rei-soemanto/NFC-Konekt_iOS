@@ -15,7 +15,6 @@ enum APIError: Error {
 
 class APIClient {
     private let baseURL: String
-    private let localData = LocalDataManager.shared
     
     init(baseURL: String) {
         self.baseURL = baseURL
@@ -24,7 +23,23 @@ class APIClient {
     func request<T: Decodable, U: Encodable>(
         endpoint: String,
         method: String,
-        body: U? = nil
+        body: U
+    ) async throws -> T {
+        let encodedBody = try? JSONEncoder().encode(body)
+        return try await performRequest(endpoint: endpoint, method: method, encodedBody: encodedBody)
+    }
+    
+    func request<T: Decodable>(
+        endpoint: String,
+        method: String
+    ) async throws -> T {
+        return try await performRequest(endpoint: endpoint, method: method, encodedBody: nil)
+    }
+    
+    private func performRequest<T: Decodable>(
+        endpoint: String,
+        method: String,
+        encodedBody: Data?
     ) async throws -> T {
         
         guard let url = URL(string: baseURL + endpoint) else {
@@ -35,31 +50,30 @@ class APIClient {
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        if let token = localData.token {
+        if let token = TokenManager.shared.getToken() {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
-        if let body = body {
-            request.httpBody = try? JSONEncoder().encode(body)
-        }
+        request.httpBody = encodedBody
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-            throw APIError.serverError("Server returned an error")
+            if let errorString = String(data: data, encoding: .utf8) {
+                print("❌ API Error [\(endpoint)]: \(errorString)")
+            }
+            throw APIError.serverError("Server returned status code \((response as? HTTPURLResponse)?.statusCode ?? 500)")
         }
         
         do {
-            let decodedData = try JSONDecoder().decode(T.self, from: data)
+            let decoder = JSONDecoder()
+            let decodedData = try decoder.decode(T.self, from: data)
             return decodedData
         } catch {
+            print("📦 RAW JSON from \(endpoint):")
+            print(String(data: data, encoding: .utf8) ?? "Unable to print raw data")
+            print("❌ DECODING ERROR: \(error)")
             throw APIError.decodingError
         }
     }
-    
-    func request<T: Decodable>(endpoint: String, method: String) async throws -> T {
-        return try await request(endpoint: endpoint, method: method, body: EmptyBody?.none)
-    }
 }
-
-struct EmptyBody: Encodable {}
